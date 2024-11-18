@@ -20,8 +20,21 @@ export const reportTypes = v.union(
   v.literal("forecast")
 );
 
+export const statusTypes = v.union(v.literal("active"), v.literal("deleted"));
+
 // Define the schema
 export default defineSchema({
+  itemHistory: defineTable({
+    itemId: v.id("items"),
+    action: v.union(
+      v.literal("create"),
+      v.literal("update"),
+      v.literal("delete")
+    ),
+    changes: v.any(),
+    timestamp: v.string(),
+    userId: v.id("users"),
+  }).index("by_itemId", ["itemId"]),
   items: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
@@ -35,6 +48,7 @@ export default defineSchema({
     orgId: v.string(),
     createdBy: v.id("users"),
     updatedBy: v.id("users"),
+    deletedAt: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
   })
     .index("by_orgId", ["orgId"])
@@ -46,6 +60,7 @@ export default defineSchema({
     description: v.optional(v.string()),
     orgId: v.string(),
     parentCategoryId: v.optional(v.id("categories")),
+    createdBy: v.id("users"),
   }).index("by_orgId", ["orgId"]),
 
   sales: defineTable({
@@ -81,6 +96,9 @@ export default defineSchema({
         role: roles,
       })
     ),
+    status: statusTypes,
+    createdAt: v.string(),
+    deletedAt: v.optional(v.string()),
   }).index("by_tokenIdentifier", ["tokenIdentifier"]),
 
   organizations: defineTable({
@@ -90,6 +108,9 @@ export default defineSchema({
     address: v.optional(v.string()),
     phone: v.optional(v.string()),
     email: v.optional(v.string()),
+    clerkOrgId: v.optional(v.string()),
+    createdBy: v.string(),
+    tokenIdentifier: v.string(),
   }),
 
   reports: defineTable({
@@ -125,10 +146,22 @@ export default defineSchema({
     .index("by_isRead", ["isRead"]),
 
   settings: defineTable({
-    userId: v.string(),
-    projectName: v.optional(v.string()),
-    rootDirectory: v.optional(v.string()),
-    includeOutsideFiles: v.optional(v.boolean()),
-    enableNotifications: v.optional(v.boolean()),
-  }).index("by_userId", ["userId"]),
+    orgId: v.string(),
+    lowStockThreshold: v.number(),
+    defaultTaxRate: v.number(),
+    currency: v.string(),
+    timeZone: v.string(),
+    enableLowStockAlerts: v.boolean(),
+    enableSalesNotifications: v.boolean(),
+    enableReportScheduling: v.boolean(),
+    reportScheduleFrequency: v.union(
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("monthly")
+    ),
+    logoUrl: v.optional(v.string()),
+    updatedBy: v.id("users"),
+    updatedAt: v.string(),
+    tokenIdentifier: v.string(),
+  }).index("by_orgId", ["orgId"]),
 });

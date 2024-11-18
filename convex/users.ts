@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import { Doc } from "./_generated/dataModel";
 import {
   MutationCtx,
   QueryCtx,
@@ -39,6 +40,8 @@ export const createUser = internalMutation({
       name: args.name,
       image: args.image,
       email: args.email,
+      status: "active",
+      createdAt: new Date().toISOString(),
     });
   },
 });
@@ -116,9 +119,9 @@ export const getUserProfile = query({
 });
 
 export const getMe = query({
-  args: {},
-  async handler(ctx, args) {
+  async handler(ctx) {
     const identity = await ctx.auth.getUserIdentity();
+    console.log("identity", identity);
     if (!identity) {
       throw new ConvexError("You must be logged in to get user information");
     }
@@ -131,3 +134,62 @@ export const getMe = query({
     return user;
   },
 });
+
+export const handleDeleteUser = internalMutation({
+  args: { tokenIdentifier: v.string() },
+  async handler(ctx, args) {
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("tokenIdentifier"), args.tokenIdentifier))
+      .first();
+
+    if (!user) {
+      throw new ConvexError("User not found");
+    }
+
+    // Soft delete user
+    await ctx.db.patch(user._id, {
+      status: "deleted",
+      deletedAt: new Date().toISOString(),
+    });
+
+    // Handle related data
+
+    console.log(`User ${user._id} has been marked as deleted`);
+  },
+});
+
+export async function hasAccessToOrg(
+  ctx: QueryCtx | MutationCtx,
+  orgId: string
+): Promise<{ user: Doc<"users">; role: string } | null> {
+  const identity = await ctx.auth.getUserIdentity();
+  console.log(identity, "heyyo");
+  if (!identity) {
+    return null;
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_tokenIdentifier", (q) =>
+      q.eq("tokenIdentifier", identity.tokenIdentifier)
+    )
+    .first();
+
+  if (!user) {
+    return null;
+  }
+
+  const orgMembership = user.orgIds.find((item) => item.orgId === orgId);
+
+  if (orgMembership) {
+    return { user, role: orgMembership.role };
+  }
+
+  if (user.tokenIdentifier.includes(orgId)) {
+    // Assuming a default role for users identified by tokenIdentifier
+    return { user, role: "member" };
+  }
+
+  return null;
+}

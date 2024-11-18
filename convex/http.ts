@@ -20,6 +20,7 @@ http.route({
           "svix-signature": headerPayload.get("svix-signature")!,
         },
       });
+      console.log("result", result.type);
 
       switch (result.type) {
         case "user.created":
@@ -40,6 +41,12 @@ http.route({
           });
           break;
 
+        case "user.deleted":
+          await ctx.runMutation(internal.users.handleDeleteUser, {
+            tokenIdentifier: `https://${process.env.CLERK_HOSTNAME}|${result.data.id}`,
+          });
+          break;
+
         case "organizationMembership.created":
           await ctx.runMutation(internal.users.addOrgIdToUser, {
             tokenIdentifier: `https://${process.env.CLERK_HOSTNAME}|${result.data.public_user_data.user_id}`,
@@ -53,6 +60,18 @@ http.route({
             tokenIdentifier: `https://${process.env.CLERK_HOSTNAME}|${result.data.public_user_data.user_id}`,
             orgId: result.data.organization.id,
             role: mapClerkRoleToConvexRole(result.data.role),
+          });
+          break;
+
+        case "organization.created":
+          console.log("here");
+          await ctx.runMutation(internal.organization.createOrganization, {
+            clerkOrgId: result.data.id,
+            name: result.data.name,
+            description: result.data.name,
+            logo: result.data.image_url,
+            createdBy: result.data.created_by,
+            tokenIdentifier: `https://${process.env.CLERK_HOSTNAME}|${result.data.created_by}`,
           });
           break;
       }

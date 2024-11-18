@@ -1,6 +1,6 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import {
   BadgeCheck,
   Bell,
@@ -26,11 +26,17 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-import { UserResource } from "@clerk/types";
+import { useRouter } from "next/navigation";
 
-export function NavUser({ user }: { user: UserResource }) {
+export function NavUser() {
   const { isMobile } = useSidebar();
-  const { signOut } = useClerk();
+  const router = useRouter();
+  const { signOut, openUserProfile } = useClerk();
+  const { user } = useUser();
+
+  if (!user) {
+    return null; // Or a loading state
+  }
 
   return (
     <SidebarMenu>
@@ -82,17 +88,24 @@ export function NavUser({ user }: { user: UserResource }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openUserProfile()}>
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Account Settings
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled>
                 <CreditCard className="mr-2 h-4 w-4" />
-                Billing
+                <p className="relative w-full">
+                  Billing{" "}
+                  <span className="text-xs absolute top-0 right-0">
+                    (Coming soon)
+                  </span>
+                </p>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/settings")}
+              >
                 <Bell className="mr-2 h-4 w-4" />
-                Notifications
+                Notification Settings
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

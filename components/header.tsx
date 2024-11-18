@@ -46,7 +46,7 @@ export function Header() {
                 <Link href="/dashboard/reports">Reports</Link>
               </Button>
               <div className="flex items-center pt-2">
-                <OrganizationSwitcher />
+                <OrganizationSwitcher hidePersonal />
               </div>
               <UserButton />
             </div>
@@ -54,8 +54,8 @@ export function Header() {
           <SignedOut>
             <SignInButton
               mode="modal"
-              fallbackRedirectUrl="/dashboard"
-              signUpFallbackRedirectUrl="/dashboard"
+              fallbackRedirectUrl="/onboarding"
+              signUpFallbackRedirectUrl="/onboarding"
             >
               <Button>Sign In</Button>
             </SignInButton>

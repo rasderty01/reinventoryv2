@@ -1,9 +1,17 @@
 "use client";
 
-import { useOrganizationList } from "@clerk/nextjs";
+import { useOrganization, useOrganizationList } from "@clerk/nextjs";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import * as React from "react";
 
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -19,16 +29,43 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export function TeamSwitcher() {
   const { isMobile } = useSidebar();
-  const { isLoaded, setActive, userMemberships } = useOrganizationList({
-    userMemberships: {
-      infinite: true,
-    },
-  });
+  const { isLoaded, setActive, userMemberships, createOrganization } =
+    useOrganizationList({
+      userMemberships: {
+        infinite: true,
+      },
+    });
+  const { organization } = useOrganization();
 
   const [open, setOpen] = React.useState(false);
+  const router = useRouter();
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [organizationName, setOrganizationName] = useState("");
+
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
+    e.preventDefault();
+    try {
+      if (!isLoaded) {
+        return null;
+      }
+
+      const newOrg = await createOrganization({ name: organizationName });
+      setActive({ organization: newOrg.id });
+      setOrganizationName("");
+      router.refresh();
+      setDialogOpen(false);
+      toast.success("Organization created successfully.");
+    } catch (error) {
+      console.error("Failed to create organization:", error);
+      toast.error("Failed to create organization.");
+    }
+  };
 
   if (!isLoaded) {
     return (
@@ -42,15 +79,6 @@ export function TeamSwitcher() {
     );
   }
 
-  const activeOrganization: (typeof userMemberships.data)[0] | undefined =
-    userMemberships.data?.find(
-      (mem) =>
-        mem.organization.id ===
-        userMemberships.data?.find(
-          (mem) => mem.organization.id === mem.organization.id
-        )?.organization.id
-    );
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -61,23 +89,25 @@ export function TeamSwitcher() {
               className="w-full data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                {activeOrganization?.organization.imageUrl ? (
+                {organization?.imageUrl ? (
                   <Image
-                    src={activeOrganization.organization.imageUrl}
-                    alt={activeOrganization.organization.name}
+                    src={organization.imageUrl}
+                    alt={organization.name}
                     className="size-4 rounded"
+                    width={32}
+                    height={32}
                   />
                 ) : (
-                  activeOrganization?.organization.name?.charAt(0) || "O"
+                  organization?.name?.charAt(0) || "O"
                 )}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
-                  {activeOrganization?.organization.name ||
-                    "Select Organization"}
+                  {organization?.name || "Select Organization"}
                 </span>
                 <span className="truncate text-xs">
-                  {activeOrganization?.organization.membersCount || 0} members
+                  {organization?.membersCount || 0}{" "}
+                  {organization?.membersCount === 1 ? "member" : "members"}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto" />
@@ -92,12 +122,13 @@ export function TeamSwitcher() {
             <DropdownMenuLabel className="text-xs text-muted-foreground">
               Stores
             </DropdownMenuLabel>
-            {userMemberships.data?.map((membership, index) => (
+            {userMemberships.data?.map((membership) => (
               <DropdownMenuItem
                 key={membership.organization.id}
                 onSelect={() => {
                   setActive({ organization: membership.organization.id });
                   setOpen(false);
+                  router.refresh();
                 }}
                 className="gap-2 p-2"
               >
@@ -107,14 +138,15 @@ export function TeamSwitcher() {
                       src={membership.organization.imageUrl}
                       alt={membership.organization.name}
                       className="size-4 rounded"
+                      width={32}
+                      height={32}
                     />
                   ) : (
                     membership.organization.name.charAt(0)
                   )}
                 </div>
                 {membership.organization.name}
-                {membership.organization.id ===
-                  userMemberships.data[index].id && (
+                {membership.organization.id === organization?.id && (
                   <Check className="ml-auto h-4 w-4" />
                 )}
               </DropdownMenuItem>
@@ -122,17 +154,16 @@ export function TeamSwitcher() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="gap-2 p-2"
-              onSelect={() => {
-                // Here you would typically open a modal or navigate to a page to create a new organization
-                console.log("Create new organization");
-                setOpen(false);
+              onSelect={(event) => {
+                event.preventDefault();
+                setDialogOpen(true);
               }}
             >
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                 <Plus className="size-4" />
               </div>
               <div className="font-medium text-muted-foreground">
-                Create new store
+                Create Organization
               </div>
             </DropdownMenuItem>
             {userMemberships.hasNextPage && (
@@ -150,6 +181,29 @@ export function TeamSwitcher() {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Organization</DialogTitle>
+            <DialogDescription>
+              Create an organization to start using Reinventory.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="organizationName">Organization Name</Label>
+              <Input
+                id="organizationName"
+                type="text"
+                value={organizationName}
+                onChange={(e) => setOrganizationName(e.currentTarget.value)}
+                placeholder="Enter organization name"
+              />
+            </div>
+            <Button type="submit">Create Organization</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </SidebarMenu>
   );
 }

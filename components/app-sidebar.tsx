@@ -1,6 +1,5 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
 import {
   BarChart2,
   BoxIcon,
@@ -10,8 +9,10 @@ import {
 } from "lucide-react";
 import * as React from "react";
 
+import { NavInbox } from "@/components/nav-inbox";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
+import { TeamSwitcher } from "@/components/team-switcher";
 import {
   Sidebar,
   SidebarContent,
@@ -19,19 +20,32 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { TeamSwitcher } from "./team-switcher";
 
 const navMainItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: BarChart2,
-    isActive: true,
   },
   {
     title: "Inventory",
-    url: "/dashboard/inventory",
+    url: "#",
     icon: BoxIcon,
+    isActive: true,
+    items: [
+      {
+        title: "All items",
+        url: "/dashboard/inventory",
+      },
+      {
+        title: "Add an item",
+        url: "/dashboard/inventory/add",
+      },
+      {
+        title: "Categories",
+        url: "/dashboard/inventory/categories",
+      },
+    ],
   },
   {
     title: "Sales",
@@ -51,22 +65,17 @@ const navMainItems = [
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useUser();
-
-  if (!user) {
-    return null; // Or a loading state
-  }
-
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
+        <NavInbox />
         <NavMain items={navMainItems} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

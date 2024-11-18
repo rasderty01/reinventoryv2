@@ -1,18 +1,9 @@
-// app/dashboard/inventory/page.tsx
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+import InventoryTable from "./_components/inventory-table";
 
-export default async function InventoryPage() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
+export default function InventoryPage() {
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-5">Inventory Management</h1>
-      {/* Add inventory management components here */}
-    </div>
+    <section className="flex items-center justify-center w-full">
+      <InventoryTable />
+    </section>
   );
 }
